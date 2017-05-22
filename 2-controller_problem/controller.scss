@@ -1,0 +1,21 @@
+@for $i from 1 through 30 {
+    .top#{$i} {
+      margin-top: #{30*$i}px;
+    }
+}
+
+.left1 {
+  margin-left: 25px;
+}
+
+div, span {
+  position: absolute;
+  display: block;
+  background-color: blue;
+  height: 25px;
+  width: 50px;
+}
+
+.selected {
+  background-color: red;
+}
