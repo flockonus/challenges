@@ -24,6 +24,7 @@ func main() {
 		// "1_2",
 		// "1_3",
 	}
+	fmt.Println(inputFiles)
 
 	for _, fileName := range inputFiles {
 		filePath := fmt.Sprintf("./input/level%s.json", fileName)
@@ -36,18 +37,22 @@ func main() {
 		check(json.Unmarshal(s, &data))
 
 		fmt.Printf(" %#v\n", data)
+
+		comb(data.Values, data.Elements, func(c []int64) {
+			fmt.Println(c, sum(c))
+		})
 		// fmt.Println("")
 	}
 
-	fmt.Println(inputFiles)
-
-	comb(5, 3, func(c []int64) {
-		fmt.Println(c, sum(c))
-	})
+	// comb(5, 3, func(c []int64) {
+	// 	fmt.Println(c, sum(c))
+	// })
 }
 
 // i think this will be slow.. original by https://rosettacode.org/wiki/Combinations#Go
-func comb(n, m int64, emit func([]int64)) {
+func comb(values []int64, m int64, emit func([]int64)) {
+	var n int64
+	n = int64(len(values))
 	// var last int64
 	s := make([]int64, m)
 	last := m - 1
@@ -55,7 +60,8 @@ func comb(n, m int64, emit func([]int64)) {
 	rc = func(i, next int64) {
 		var j int64
 		for j = next; j < n; j++ {
-			s[i] = j
+			// s[i] = j
+			s[i] = values[j]
 			if i == last {
 				emit(s)
 			} else {
