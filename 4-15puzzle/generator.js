@@ -6,7 +6,7 @@ const DIM = 3
 // size of the board (array)
 const SIZE = DIM * DIM
 
-const EMPTY = 'X'
+const EMPTY = '☯'
 
 // where the empty space starts (considering 1 based index)
 let pos = SIZE
@@ -92,12 +92,13 @@ prettyPrintBoard(board)
 
 // for DIM=4 -- 15! - 8!
 // const maxMoves = 259459200
-const maxMoves = 4
+const maxMoves = 2
 
 const movesExecuted = []
 
-for (var i = 0; i <= maxMoves; i++) {
+for (var i = 0; i < maxMoves; i++) {
   const nextMoves = possibleMoves()
+  // TODO filter out the inverse of (last move) from possibleMoves
   const nextMove = _.sample(nextMoves)
   movesExecuted.push(nextMove)
   doMove(nextMove)
