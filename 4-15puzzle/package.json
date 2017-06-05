@@ -1,0 +1,17 @@
+{
+  "name": "4-15puzzle",
+  "version": "1.0.0",
+  "description": "",
+  "main": "generator.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "standard": "10.0.2"
+  },
+  "dependencies": {
+    "lodash": "4.17.4"
+  }
+}
