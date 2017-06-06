@@ -1,7 +1,7 @@
 const _ = require('lodash')
 
 // dimension of the board, altho we make 1 dimensional
-const DIM = 3
+const DIM = 9
 
 // size of the board (array)
 const SIZE = DIM * DIM
@@ -46,6 +46,17 @@ function printSolution (moves) {
   console.log('solution:', moves.reverse().map(reverseMove).join(', '))
 }
 
+// print back as the problem proposed it
+function formatAsOutput () {
+  const table = []
+  for (var i = 0; i < DIM; i++) {
+    table.push(board.slice(i*DIM, i*DIM + DIM))
+  }
+  return JSON.stringify({
+    puzzle: table
+  })
+}
+
 const moveRule = {
   u: () => pos - DIM > 0,
   d: () => SIZE - pos > DIM,
@@ -62,7 +73,7 @@ function possibleMoves () {
 }
 
 function doMove (move) {
-  console.log('move:', move, 'pos:', pos)
+  // console.log('move:', move, 'current pos:', pos)
   let newEmptyPos
   switch (move) {
     case 'u':
@@ -90,30 +101,26 @@ function doMove (move) {
 console.log('start:')
 prettyPrintBoard(board)
 
-// for DIM=4 -- 15! - 8!
-// const maxMoves = 259459200
-const maxMoves = 2
+// max number of moves to be executed during simulation
+const maxMoves = Math.pow(DIM, DIM - 1)
+// const maxMoves = 2
 
 const movesExecuted = []
 
 for (var i = 0; i < maxMoves; i++) {
-  const nextMoves = possibleMoves()
-  // TODO filter out the inverse of (last move) from possibleMoves
+  const lastMove = movesExecuted.length < 1 ? null : movesExecuted[movesExecuted.length - 1]
+  // make sure to not undo previous move
+  const nextMoves = possibleMoves().filter(move => move !== reverseMove(lastMove))
+  // pick one random from possible next moves
   const nextMove = _.sample(nextMoves)
   movesExecuted.push(nextMove)
   doMove(nextMove)
-  prettyPrintBoard(board)
+  // prettyPrintBoard(board)
 }
 
-printSolution(movesExecuted)
+// printSolution(movesExecuted)
 
-// const nextMoves = possibleMoves()
 
-// console.log('possible moves:', nextMoves)
-
-// doMove('l')
-// prettyPrintBoard(board)
-// doMove('l')
-// prettyPrintBoard(board)
-// doMove('u')
-// prettyPrintBoard(board)
+console.log('final:')
+prettyPrintBoard(board)
+console.log(formatAsOutput());
