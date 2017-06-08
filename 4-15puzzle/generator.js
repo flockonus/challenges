@@ -116,13 +116,8 @@ function doMove (move) {
   board[pos - 1] = EMPTY
 }
 
-function saveSolutions (states) {
-  // could be much more efficient to save as an array
-  fs.writeFileSync(`map-${DIM}.json`, JSON.stringify(states))
-}
-
 // max number of moves to be executed during simulation
-const maxMoves = 3e6
+const maxMoves = 1e7
 // const maxMoves = 362880 // for DIM = 3
 // const maxMoves = 2
 
@@ -132,37 +127,73 @@ var moveCount = 0
 var repeatedPositions = 0
 var newPositions = 0
 
-console.log(`start: ${maxMoves} moves`)
-// prettyPrintBoard(board)
-for (var i = 0; i < maxMoves; i++) {
-  const lastMove = movesExecuted.length < 1 ? null : movesExecuted[movesExecuted.length - 1]
-  // make sure to not undo previous move
-  const nextMoves = possibleMoves().filter(move => move !== reverseMove(lastMove))
-  // pick one random from possible next moves
-  const nextMove = _.sample(nextMoves)
-  // console.log('next:', nextMove, 'possible:', possibleMoves())
-  movesExecuted.push(nextMove)
-  doMove(nextMove)
-  // can link the current state of the board, to the move and number of steps that led to it
-  // cast to string (hope is faster than .join(','))
-  const serializedBoard = board + ''
-  const sameStateBefore = states[serializedBoard]
-  if (sameStateBefore) {
-    // 'reset' the step count to rely on the fact we have seen this state happen before
-    moveCount = sameStateBefore.steps
-    // console.log('  -- seen this state before, skipping it')
-    repeatedPositions++
-  } else {
-    states[serializedBoard] = {
-      steps: moveCount,
-      move: reverseMove(nextMove)
-    }
-    newPositions++
+// stream to the file well be writting
+var stream
+// keep a buffer to the solution file we are creating
+var writeQueue = []
+function bufferedAppend (row) {
+  writeQueue.push(row + ',\n')
+  // this doesnt seem to optimize anything really
+  if (writeQueue.length > 4) {
+    stream.write(writeQueue.join(''))
+    writeQueue = []
   }
-  // prettyPrintBoard(board)
-  moveCount++
 }
 
-// printSolution(movesExecuted)
-console.log({newPositions, repeatedPositions})
-saveSolutions(states)
+// just dont start before we can write to file
+function run () {
+  console.log(`start - DIM: ${DIM} ${maxMoves} moves`)
+
+  // add solution case
+  const firstNode = {s:moveCount, m:''}
+  states[board + ''] = firstNode
+  bufferedAppend(`"${board + ''}": ${JSON.stringify(firstNode)}`)
+  // prettyPrintBoard(board)
+  for (var i = 0; i < maxMoves; i++) {
+    const lastMove = movesExecuted.length < 1 ? null : movesExecuted[movesExecuted.length - 1]
+    // make sure to not undo previous move
+    const nextMoves = possibleMoves().filter(move => move !== reverseMove(lastMove))
+    // pick one random from possible next moves
+    const nextMove = _.sample(nextMoves)
+    // console.log('next:', nextMove, 'possible:', possibleMoves())
+    movesExecuted.push(nextMove)
+    doMove(nextMove)
+    // can link the current state of the board, to the move and number of steps that led to it
+    // cast to string (hope is faster than .join(','))
+    const serializedBoard = board + ''
+    const sameStateBefore = states[serializedBoard]
+    if (sameStateBefore) {
+      // 'reset' the step count to rely on the fact we have seen this state happen before
+      moveCount = sameStateBefore.s
+      // console.log('  -- seen this state before, skipping it')
+      repeatedPositions++
+    } else {
+      const node = {
+        s: moveCount,
+        m: reverseMove(nextMove)
+      }
+      states[serializedBoard] = node
+      newPositions++
+      bufferedAppend(`"${serializedBoard}": ${JSON.stringify(node)}`)
+    }
+    // prettyPrintBoard(board)
+    moveCount++
+  }
+  console.log('stats:', {newPositions, repeatedPositions})
+}
+
+const filePath = `map-${DIM}.json`
+// erase previous solution map file if we had any
+fs.unlinkSync(filePath)
+
+stream = fs.createWriteStream(filePath)
+
+stream.once('open', function (fd) {
+  stream.write('{\n')
+  run()
+  // push a bogus state so there is no comma left over in the JSON
+  bufferedAppend(`"":{}`)
+  stream.write(writeQueue.join(''))
+  stream.write('}\n')
+  stream.end()
+})
