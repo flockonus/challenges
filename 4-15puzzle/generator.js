@@ -20,7 +20,7 @@ function buildBoard () {
   return a
 }
 
-// memory of board states - board(String): {move, steps}
+// memory of board states - board(String): moveCount(Number) (just store the count to optm. memory usage)
 var states = {}
 
 var board = buildBoard()
@@ -117,7 +117,7 @@ function doMove (move) {
 }
 
 // max number of moves to be executed during simulation
-const maxMoves = 1e7
+const maxMoves = 8e6
 // const maxMoves = 362880 // for DIM = 3
 // const maxMoves = 2
 
@@ -134,7 +134,7 @@ var writeQueue = []
 function bufferedAppend (row) {
   writeQueue.push(row + ',\n')
   // this doesnt seem to optimize anything really
-  if (writeQueue.length > 4) {
+  if (writeQueue.length > 100) {
     stream.write(writeQueue.join(''))
     writeQueue = []
   }
@@ -146,7 +146,7 @@ function run () {
 
   // add solution case
   const firstNode = {s:moveCount, m:''}
-  states[board + ''] = firstNode
+  states[board + ''] = moveCount
   bufferedAppend(`"${board + ''}": ${JSON.stringify(firstNode)}`)
   // prettyPrintBoard(board)
   for (var i = 0; i < maxMoves; i++) {
@@ -164,7 +164,7 @@ function run () {
     const sameStateBefore = states[serializedBoard]
     if (sameStateBefore) {
       // 'reset' the step count to rely on the fact we have seen this state happen before
-      moveCount = sameStateBefore.s
+      moveCount = sameStateBefore
       // console.log('  -- seen this state before, skipping it')
       repeatedPositions++
     } else {
@@ -172,7 +172,7 @@ function run () {
         s: moveCount,
         m: reverseMove(nextMove)
       }
-      states[serializedBoard] = node
+      states[serializedBoard] = moveCount
       newPositions++
       bufferedAppend(`"${serializedBoard}": ${JSON.stringify(node)}`)
     }
@@ -184,7 +184,7 @@ function run () {
 
 const filePath = `map-${DIM}.json`
 // erase previous solution map file if we had any
-fs.unlinkSync(filePath)
+try {fs.unlinkSync(filePath)} catch(e) {}
 
 stream = fs.createWriteStream(filePath)
 
