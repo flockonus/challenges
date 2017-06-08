@@ -21,7 +21,7 @@ function buildBoard () {
 }
 
 // memory of board states - board(String): moveCount(Number) (just store the count to optm. memory usage)
-var states = {}
+var states = new Map()
 
 var board = buildBoard()
 
@@ -146,7 +146,7 @@ function run () {
 
   // add solution case
   const firstNode = {s:moveCount, m:''}
-  states[board + ''] = moveCount
+  states.set(board + '', moveCount)
   bufferedAppend(`"${board + ''}": ${JSON.stringify(firstNode)}`)
   // prettyPrintBoard(board)
   for (var i = 0; i < maxMoves; i++) {
@@ -161,7 +161,7 @@ function run () {
     // can link the current state of the board, to the move and number of steps that led to it
     // cast to string (hope is faster than .join(','))
     const serializedBoard = board + ''
-    const sameStateBefore = states[serializedBoard]
+    const sameStateBefore = states.get(serializedBoard)
     if (sameStateBefore) {
       // 'reset' the step count to rely on the fact we have seen this state happen before
       moveCount = sameStateBefore
@@ -172,7 +172,7 @@ function run () {
         s: moveCount,
         m: reverseMove(nextMove)
       }
-      states[serializedBoard] = moveCount
+      states.set(serializedBoard, moveCount)
       newPositions++
       bufferedAppend(`"${serializedBoard}": ${JSON.stringify(node)}`)
     }
