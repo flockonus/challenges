@@ -1,9 +1,11 @@
 const _ = require('lodash')
 require('colors')
-const fs = require('fs')
+// const fs = require('fs')
 
 // dimension of the board, altho we make 1 dimensional
-const DIM = 4
+const DIM = parseInt(process.argv[2])
+
+if (isNaN(DIM) || !DIM) throw new Error('missing argv 1: rows, argv 2: input filename')
 
 // size of the board (array)
 const SIZE = DIM * DIM
@@ -122,32 +124,32 @@ const maxMoves = 8e6
 // const maxMoves = 2
 
 // not using now
-const movesExecuted = []
+var movesExecuted = []
 var moveCount = 0
 var repeatedPositions = 0
 var newPositions = 0
 
-// stream to the file well be writting
-var stream
-// keep a buffer to the solution file we are creating
-var writeQueue = []
-function bufferedAppend (row) {
-  writeQueue.push(row + ',\n')
-  // this doesnt seem to optimize anything really
-  if (writeQueue.length > 100) {
-    stream.write(writeQueue.join(''))
-    writeQueue = []
-  }
-}
+// // stream to the file well be writting
+// var stream
+// // keep a buffer to the solution file we are creating
+// var writeQueue = []
+// function bufferedAppend (row) {
+//   writeQueue.push(row + ',\n')
+//   // this doesnt seem to optimize anything really
+//   if (writeQueue.length > 100) {
+//     stream.write(writeQueue.join(''))
+//     writeQueue = []
+//   }
+// }
 
 // just dont start before we can write to file
-function run () {
+function buildSolutions () {
   console.log(`start - DIM: ${DIM} ${maxMoves} moves`)
 
   // add solution case
-  const firstNode = {s:moveCount, m:''}
+  // const firstNode = {s: moveCount, m: ''}
   states.set(board + '', moveCount)
-  bufferedAppend(`"${board + ''}": ${JSON.stringify(firstNode)}`)
+  // bufferedAppend(`"${board + ''}": ${JSON.stringify(firstNode)}`)
   // prettyPrintBoard(board)
   for (var i = 0; i < maxMoves; i++) {
     const lastMove = movesExecuted.length < 1 ? null : movesExecuted[movesExecuted.length - 1]
@@ -161,20 +163,21 @@ function run () {
     // can link the current state of the board, to the move and number of steps that led to it
     // cast to string (hope is faster than .join(','))
     const serializedBoard = board + ''
-    const sameStateBefore = states.get(serializedBoard)
-    if (sameStateBefore) {
+    const prevEffort = states.get(serializedBoard)
+    if (prevEffort) {
+      // TODO optimize see if we should switch up states based on the number here
       // 'reset' the step count to rely on the fact we have seen this state happen before
-      moveCount = sameStateBefore
+      moveCount = prevEffort
       // console.log('  -- seen this state before, skipping it')
       repeatedPositions++
     } else {
-      const node = {
-        s: moveCount,
-        m: reverseMove(nextMove)
-      }
+      // const node = {
+      //   s: moveCount,
+      //   m: reverseMove(nextMove)
+      // }
       states.set(serializedBoard, moveCount)
       newPositions++
-      bufferedAppend(`"${serializedBoard}": ${JSON.stringify(node)}`)
+      // bufferedAppend(`"${serializedBoard}": ${JSON.stringify(node)}`)
     }
     // prettyPrintBoard(board)
     moveCount++
@@ -182,18 +185,61 @@ function run () {
   console.log('stats:', {newPositions, repeatedPositions})
 }
 
-const filePath = `map-${DIM}.json`
+// find solution for given input
+function findSolutionForInput () {
+  var startTime = Date.now()
+  board = require('./input/' + process.argv[3]).puzzle
+  pos = _.indexOf(board, EMPTY) + 1
+  movesExecuted = []
+
+  var maxMovesToSolution = 8e6
+  moveCount = 0
+  var solution
+
+  console.log('looking for solution, max moves:', maxMovesToSolution)
+  prettyPrintBoard(board)
+
+  while (moveCount < maxMovesToSolution) {
+    solution = states.get(board + '')
+    if (solution) {
+      console.log('solved!!', solution, moveCount, '=', solution + moveCount, 'in', (Date.now() - startTime) + 'ms')
+      break
+    }
+    // prettyPrintBoard(board)
+
+    const lastMove = movesExecuted.length < 1 ? null : movesExecuted[movesExecuted.length - 1]
+    // make sure to not undo previous move
+    const nextMoves = possibleMoves().filter(move => move !== reverseMove(lastMove))
+    // pick one random from possible next moves
+    const nextMove = _.sample(nextMoves)
+    // console.log('next:', nextMove, 'possible:', possibleMoves())
+    movesExecuted.push(nextMove)
+    doMove(nextMove)
+
+    moveCount++
+  }
+
+  if (!solution) {
+    console.log('could not solve :(')
+  }
+}
+
+// const filePath = `map-${DIM}.json`
 // erase previous solution map file if we had any
-try {fs.unlinkSync(filePath)} catch(e) {}
+// try { fs.unlinkSync(filePath) } catch (e) {}
 
-stream = fs.createWriteStream(filePath)
+// ignoring the file writing part
+// stream = fs.createWriteStream(filePath)
+// stream.once('open', function (fd) {
+//   stream.write('{\n')
+//   run()
+//   // push a bogus state so there is no comma left over in the JSON
+//   bufferedAppend(`"":{}`)
+//   stream.write(writeQueue.join(''))
+//   stream.write('}\n')
+//   stream.end()
+// })
 
-stream.once('open', function (fd) {
-  stream.write('{\n')
-  run()
-  // push a bogus state so there is no comma left over in the JSON
-  bufferedAppend(`"":{}`)
-  stream.write(writeQueue.join(''))
-  stream.write('}\n')
-  stream.end()
-})
+buildSolutions()
+
+findSolutionForInput()
